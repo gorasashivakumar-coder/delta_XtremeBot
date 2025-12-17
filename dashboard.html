@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XtremeBot | Live Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        slate: { 850: '#1e293b' } /* Custom dark slate */
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Base transition */
+        body {
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .glass-panel {
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Light Mode Styles (Default) */
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --panel-bg: #ffffff;
+            --panel-border: #e2e8f0;
+            --accent-color: #dc2626;
+        }
+
+        /* Dark Mode Styles */
+        .dark {
+            --bg-color: #0f172a;
+            /* Slate 900 */
+            --text-color: #f1f5f9;
+            --panel-bg: rgba(30, 41, 59, 0.4);
+            /* Glassy dark */
+            --panel-border: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(12px);
+        }
+
+        .token-icon {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .animate-pulse-red {
+            animation: pulse-red 2s infinite;
+        }
+    </style>
+</head>
+
+<body class="p-8 min-h-screen">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-10">
+        <div class="flex items-center gap-4">
+            <!-- Brand Symbol -->
+            <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-lg shadow-red-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3"
+                    stroke="currentColor" class="w-7 h-7 text-white">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">XtremeBot</h1>
+                <p class="text-xs font-bold text-red-600 uppercase tracking-widest mt-0.5">Live Market Data</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Theme Toggle Button -->
+            <button onclick="toggleTheme()"
+                class="p-2 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Toggle Theme">
+                <!-- Sun Icon (Hidden in Dark) -->
+                <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5 hidden dark:block">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                </svg>
+                <!-- Moon Icon (Hidden in Light) -->
+                <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5 block dark:hidden">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                </svg>
+            </button>
+
+            <div class="px-3 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-500 dark:text-slate-400 shadow-sm"
+                id="last-update">Connecting...</div>
+            <div
+                class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-red-100 dark:border-red-900/30 shadow-sm">
+                <div class="w-2 h-2 rounded-full bg-red-600 animate-pulse-red"></div>
+                <span class="text-xs font-bold text-red-600 dark:text-red-500 tracking-wide">LIVE</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Signal Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10" id="cards-container"></div>
+
+    <!-- Active Trades Pane -->
+    <div class="glass-panel rounded-xl p-6 mb-8">
+        <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <div class="w-1.5 h-6 bg-red-600 rounded-full"></div>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Active Positions</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-slate-400 dark:text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-l-lg">Time</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50">Symbol</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50">Side</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50">Entry</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50">Current</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50">PnL</th>
+                        <th class="p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-r-lg">State</th>
+                    </tr>
+                </thead>
+                <tbody id="active-trades-body" class="text-sm font-medium">
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-400 italic">No active trades.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- History Pane -->
+    <div class="glass-panel rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <div class="w-1.5 h-6 bg-slate-400 dark:bg-slate-600 rounded-full"></div>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Trade History <span
+                    class="text-slate-400 dark:text-slate-500 text-sm font-medium ml-2">(48h)</span></h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-slate-400 dark:text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Time</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Symbol</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Type</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Entry</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Exit</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">PnL</th>
+                        <th class="p-4 border-b border-slate-100 dark:border-slate-700">Result</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body" class="text-sm text-slate-600 dark:text-slate-400">
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-400">Loading history...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Init Theme
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        const LOGO_URLS = {
+            "BTCUSD": "https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=025",
+            "ETHUSD": "https://cryptologos.cc/logos/ethereum-eth-logo.png?v=025",
+            "SOLUSD": "https://cryptologos.cc/logos/solana-sol-logo.png?v=025"
+        };
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+
+                if (data.signals) updateCards(data.signals);
+                if (data.history) processTrades(data.history);
+
+                const now = new Date();
+                document.getElementById('last-update').innerText = now.toLocaleTimeString();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function updateCards(signals) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            for (const [symbol, info] of Object.entries(signals)) {
+                if (info.error) continue;
+
+                let badgeClass = "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300";
+
+                if (info.signal.includes("LONG")) {
+                    badgeClass = "bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
+                }
+                if (info.signal.includes("SHORT")) {
+                    badgeClass = "bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+                }
+
+                const isEntry = info.signal.includes("ENTRY");
+                const entryBadge = isEntry ? `<span class="absolute -top-3 right-6 px-3 py-1 bg-red-600 text-white font-bold text-xs tracking-wide rounded shadow-md shadow-red-500/30">NEW SIGNAL</span>` : '';
+                const logo = LOGO_URLS[symbol] || "";
+
+                // Card Template
+                const cardHtml = `
+                    <div class="glass-panel rounded-xl p-6 relative group hover:shadow-lg transition-all duration-300">
+                        ${entryBadge}
+
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-100 dark:border-slate-700">
+                                <img src="${logo}" class="w-8 h-8 opacity-90">
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">${symbol}</h3>
+                                <div class="flex items-center gap-2 text-xs">
+                                     <span class="text-slate-400 font-medium">15m Algo</span>
+                                     <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                                     <span class="${info.accuracy >= 50 ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'} font-bold">Win Rate ${info.accuracy}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Signal</p>
+                                <div class="px-2 py-0.5 rounded w-fit text-sm font-bold ${badgeClass}">
+                                    ${info.signal}
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Trend</p>
+                                <p class="text-lg font-bold ${info.trend === 'BULLISH' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">${info.trend}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-xs pl-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+                            <div class="text-center border-r border-slate-100 dark:border-slate-700">
+                                <span class="block text-slate-400 font-semibold mb-1">Dynamic Stop</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 font-bold">$${info.supertrend}</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-slate-400 font-semibold mb-1">Trade Time</span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300 font-bold">${info.trend_age}m</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            }
+        }
+
+        function processTrades(history) {
+            const activeBody = document.getElementById('active-trades-body');
+            const historyBody = document.getElementById('history-body');
+
+            activeBody.innerHTML = '';
+            historyBody.innerHTML = '';
+
+            const openTrades = history.filter(t => t.status === 'OPEN');
+            const closedTrades = history.filter(t => t.status === 'CLOSED');
+
+            // --- Active Trades ---
+            if (openTrades.length === 0) {
+                activeBody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400 italic">No active positions.</td></tr>';
+            } else {
+                openTrades.forEach(trade => {
+                    const pnlClass = trade.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                    const activeClass = "bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800";
+
+                    const row = `
+                        <tr class="border-b border-slate-50 dark:border-slate-700 transition ${activeClass}">
+                            <td class="p-4 font-mono text-slate-500 dark:text-slate-400 text-xs">${trade.entry_time.split(' ')[1]}</td>
+                            <td class="p-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2"><img src="${LOGO_URLS[trade.symbol]}" class="w-4 h-4"> ${symbolName(trade.symbol)}</td>
+                            <td class="p-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${trade.type === 'LONG' ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800' : 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-800'}">${trade.type}</span></td>
+                            <td class="p-4 font-mono text-slate-600 dark:text-slate-400 text-xs">$${trade.entry_price}</td>
+                            <td class="p-4 font-mono text-slate-800 dark:text-slate-200 font-bold text-xs">$${trade.exit_price}</td>
+                            <td class="p-4 font-mono font-bold ${pnlClass}">${trade.pnl > 0 ? '+' : ''}${trade.pnl}</td>
+                            <td class="p-4 text-[10px] font-bold text-red-600 dark:text-red-500 uppercase tracking-widest animate-pulse">ACTIVE</td>
+                        </tr>
+                    `;
+                    activeBody.innerHTML += row;
+                });
+            }
+
+            // --- History ---
+            if (closedTrades.length === 0) {
+                historyBody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">No closed history.</td></tr>';
+            } else {
+                closedTrades.forEach(trade => {
+                    const pnlClass = trade.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                    const resultBadge = trade.pnl >= 0
+                        ? '<span class="px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-[10px] font-bold rounded">WIN</span>'
+                        : '<span class="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold rounded">LOSS</span>';
+
+                    const row = `
+                        <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                            <td class="p-4 font-mono text-slate-400 dark:text-slate-500 text-xs">${trade.entry_time}</td>
+                            <td class="p-4 font-medium text-slate-600 dark:text-slate-300 flex items-center gap-2"><img src="${LOGO_URLS[trade.symbol]}" class="w-4 h-4 grayscale opacity-50"> ${symbolName(trade.symbol)}</td>
+                            <td class="p-4"><span class="text-xs font-bold ${trade.type === 'LONG' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">${trade.type}</span></td>
+                            <td class="p-4 font-mono text-slate-500 dark:text-slate-400 text-xs">$${trade.entry_price}</td>
+                            <td class="p-4 font-mono text-slate-500 dark:text-slate-400 text-xs">$${trade.exit_price}</td>
+                            <td class="p-4 font-mono font-bold ${pnlClass}">${trade.pnl > 0 ? '+' : ''}${trade.pnl}</td>
+                            <td class="p-4">${resultBadge}</td>
+                        </tr>
+                    `;
+                    historyBody.innerHTML += row;
+                });
+            }
+        }
+
+        function symbolName(s) { return s.replace('USD', ''); }
+
+        setInterval(fetchData, 2000);
+        fetchData();
+    </script>
+</body>
+
+</html>
