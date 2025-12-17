@@ -2,8 +2,7 @@
 
 **XtremeBot** is a high-precision trading bot and live monitoring dashboard designed for **Delta Exchange**. It specializes in trend following strategies on **BTCUSD**, **ETHUSD**, and **SOLUSD** using advanced HMA Slope and Supertrend indicators.
 
-![XtremeBot Dashboard](https://via.placeholder.com/800x400?text=Dashboard+Preview) 
-*(Replace with actual screenshot if available)*
+<img width="1884" height="947" alt="image" src="https://github.com/user-attachments/assets/7519f9b7-f7d2-4bdd-b700-8c214ebab778" />
 
 ## 🚀 Features
 
