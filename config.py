@@ -2,8 +2,8 @@
 # API Configuration
 # Get these from https://www.delta.exchange/app/account/manageapikeys
 # NOTE: Ensure you are using the correct domain (india vs global)
-API_KEY = "dIQGd2j2nkRI49NmQLoVBButNRp2nO"
-API_SECRET = "jdyM7hXSqVfWPSqo0VeOcUX9MgM87nxKZUY8OqMsZfOvxrgkEMsVMlbKxIhf"
+API_KEY = ""
+API_SECRET = ""
 
 # Base URL
 # For India users: https://api.india.delta.exchange
