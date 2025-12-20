@@ -94,8 +94,12 @@ def run_backtest():
     # -------------------------------------------------------------------------
     print("Calculating Indicators...")
     try:
+        # Get Symbol Config
+        sym_config = config.SYMBOL_CONFIG.get(SYMBOL, {})
+        slope_scaling = sym_config.get("slope_scaling", config.DEFAULT_SLOPE_SCALING)
+        
         df['HMA'] = indicators.calculate_hma(df['close'], period=config.HMA_PERIOD)
-        df['HMA_Slope'] = indicators.calculate_slope_degrees(df['HMA'], scaling_factor=config.SLOPE_SCALING_FACTOR)
+        df['HMA_Slope'] = indicators.calculate_slope_degrees(df['HMA'], scaling_factor=slope_scaling)
         df = indicators.calculate_supertrend(df, period=config.SUPERTREND_PERIOD, multiplier=config.SUPERTREND_MULTIPLIER)
     except Exception as e:
         print(f"Indicator Error: {e}")
@@ -155,10 +159,14 @@ def run_backtest():
             slope = row['HMA_Slope']
             
             # Signal Generation
+            # Get Symbol Config
+            sym_config = config.SYMBOL_CONFIG.get(SYMBOL, {})
+            slope_threshold = sym_config.get("slope_threshold", config.HMA_SLOPE_THRESHOLD)
+
             signal = 0
-            if trend == 1 and slope >= config.HMA_SLOPE_THRESHOLD:
+            if trend == 1 and slope >= slope_threshold:
                 signal = 1
-            elif trend == -1 and slope <= -config.HMA_SLOPE_THRESHOLD:
+            elif trend == -1 and slope <= -slope_threshold:
                 signal = -1
             
         # Execution Logic

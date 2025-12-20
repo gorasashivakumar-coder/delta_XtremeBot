@@ -1,0 +1,14 @@
+[Unit]
+Description=Robin Dashboard Server
+After=network.target
+
+[Service]
+# Replace 'username' with your actual GCP username
+WorkingDirectory=/home/%u/robin_bot
+ExecStart=/usr/bin/python3 server.py
+Restart=always
+RestartSec=10
+User=%u
+
+[Install]
+WantedBy=multi-user.target

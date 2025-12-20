@@ -12,7 +12,13 @@ BASE_URL = "https://api.india.delta.exchange"
 
 # Trading Settings
 SYMBOL = "ETHUSD"  # The product symbol on Delta Exchange
-QUANTITY = 1       # Quantity in contracts (or ETH depending on contract specs, usually contracts for futures)
+# QUANTITY = 1       # Quantity in contracts (or ETH depending on contract specs, usually contracts for futures)
+QUANTITIES = {
+    "BTCUSD": 1,
+    "ETHUSD": 1,
+    "SOLUSD": 10
+}
+DEFAULT_QUANTITY = 1
 LEVERAGE = 10
 TIMEFRAME = "15m"   # 15 minute candles
 
@@ -21,15 +27,32 @@ SUPERTREND_PERIOD = 2
 SUPERTREND_MULTIPLIER = 2
 HMA_PERIOD = 31
 
-# Slope Threshold
-# Angle in degrees. 
-# NOTE: This is mathematically derived. You may need to tune 'SLOPE_SCALING_FACTOR' to match your visual chart.
+# Symbol Specific Configuration (Slope & Thresholds)
+SYMBOL_CONFIG = {
+    "ETHUSD": {
+        "slope_scaling": 7900.0,
+        "slope_threshold": 26
+    },
+    "SOLUSD": {
+        "slope_scaling": 3000.0,
+        "slope_threshold": 26
+    },
+    "BTCUSD": {
+        "slope_scaling": 3000.0,
+        "slope_threshold": 26
+    }
+}
+
+# Fallback defaults
+DEFAULT_SLOPE_SCALING = 3000.0
 HMA_SLOPE_THRESHOLD = 26 
-# Scaling factor to make the slope calculation meaningful. 
-# Price difference of 10 USD over 1 minute might need scaling to compare with "degrees" visually.
-# A value of 3000 means roughly 0.016% move is 26 degrees (matching old sensitivity).
-SLOPE_SCALING_FACTOR = 3000.0 
+
 
 # System Settings
 DRY_RUN = True  # Set to False to actually place trades
 LOG_LEVEL = "INFO"
+
+# Telegram Notification Configuration
+TELEGRAM_ENABLED = True # Set to True after filling credentials
+TELEGRAM_BOT_TOKEN = "8355697250:AAH4RKxXx_SGr2rwVKxp8Y6L0e3hxXdzhwU"
+TELEGRAM_CHAT_ID = "662682705" # ShivakumarGorasa

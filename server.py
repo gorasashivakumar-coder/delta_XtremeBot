@@ -1,16 +1,20 @@
 from flask import Flask, jsonify, render_template_string
+from datetime import datetime, timedelta
+import pytz
 import config
-import delta_exchange
+from delta_exchange import DeltaExchange
 import indicators
+import strategy_utils
 import pandas as pd
 import threading
 import time
+import pytz
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
 # Initialize Exchange
-exchange = delta_exchange.DeltaExchange(config.API_KEY, config.API_SECRET, base_url=config.BASE_URL)
+exchange = DeltaExchange(config.API_KEY, config.API_SECRET, base_url=config.BASE_URL)
 
 SYMBOLS = ["BTCUSD", "ETHUSD", "SOLUSD"]
 CACHE = {
@@ -19,103 +23,7 @@ CACHE = {
     "last_update": None
 }
 
-def scan_trades_for_df(df, symbol):
-    """
-    Scans the dataframe for historical trades based on strategy logic.
-    Returns a list of trade dicts.
-    """
-    trades = []
-    in_position = 0 # 0, 1, -1
-    entry_price = 0.0
-    entry_time = None
-    
-    # We iterate from row 1 (need prev row for trend flip checks if needed, 
-    # but we have trend_age logic which might need lookback.
-    # Simpler: Iterate row by row simulating the bot.
-    
-    # Need to look back for Trend Age calculation dynamically or just trust the columns if we pre-calc them?
-    # We pre-calc indicators. Let's pre-calc 'Trend Start' or 'Age' column.
-    
-    # Pre-calc Trend Age for entire DF
-    # This is O(N) but N is small (2 days ~ 200 rows)
-    trend_starts = [0] * len(df)
-    current_start = 0
-    for i in range(1, len(df)):
-        if df.iloc[i]['SupertrendTrend'] != df.iloc[i-1]['SupertrendTrend']:
-            current_start = i
-        trend_starts[i] = current_start
-        
-    for i in range(1, len(df)):
-        row = df.iloc[i]
-        curr_price = row['close']
-        trend = row['SupertrendTrend']
-        slope = row['HMA_Slope']
-        time_str = row['time'] # timestamp object
-        
-        # Calculate Age
-        trend_age = i - trend_starts[i]
-        
-        # Check Exit first
-        if in_position == 1 and trend == -1:
-            # Exit Long
-            pnl = curr_price - entry_price
-            trades.append({
-                "symbol": symbol,
-                "type": "LONG",
-                "entry_price": entry_price,
-                "exit_price": curr_price,
-                "entry_time": entry_time,
-                "exit_time": time_str,
-                "pnl": round(pnl, 2),
-                "status": "CLOSED"
-            })
-            in_position = 0
-            
-        elif in_position == -1 and trend == 1:
-            # Exit Short
-            pnl = entry_price - curr_price
-            trades.append({
-                "symbol": symbol,
-                "type": "SHORT",
-                "entry_price": entry_price,
-                "exit_price": curr_price,
-                "entry_time": entry_time,
-                "exit_time": time_str,
-                "pnl": round(pnl, 2),
-                "status": "CLOSED"
-            })
-            in_position = 0
-            
-        # Check Entry
-        if in_position == 0:
-            # BUY
-            if trend == 1 and slope >= config.HMA_SLOPE_THRESHOLD and trend_age <= 1:
-                in_position = 1
-                entry_price = curr_price
-                entry_time = time_str
-                
-            # SELL
-            elif trend == -1 and slope <= -config.HMA_SLOPE_THRESHOLD and trend_age <= 1:
-                in_position = -1
-                entry_price = curr_price
-                entry_time = time_str
-    
-    # If still in position, add Open Trade
-    if in_position != 0:
-        curr_price = df.iloc[-1]['close']
-        pnl = (curr_price - entry_price) if in_position == 1 else (entry_price - curr_price)
-        trades.append({
-            "symbol": symbol,
-            "type": "LONG" if in_position == 1 else "SHORT",
-            "entry_price": entry_price,
-            "exit_price": curr_price,
-            "entry_time": entry_time,
-            "exit_time": "-",
-            "pnl": round(pnl, 2),
-            "status": "OPEN"
-        })
-        
-    return trades
+
 
 def monitor_market():
     """Background task to update market data periodically"""
@@ -137,12 +45,16 @@ def monitor_market():
                     continue
                 
                 # Indicators
+                sym_config = config.SYMBOL_CONFIG.get(symbol, {})
+                slope_threshold = sym_config.get("slope_threshold", config.HMA_SLOPE_THRESHOLD)
+                slope_scaling = sym_config.get("slope_scaling", config.DEFAULT_SLOPE_SCALING)
+
                 df['HMA'] = indicators.calculate_hma(df['close'], period=config.HMA_PERIOD)
-                df['HMA_Slope'] = indicators.calculate_slope_degrees(df['HMA'], scaling_factor=config.SLOPE_SCALING_FACTOR)
+                df['HMA_Slope'] = indicators.calculate_slope_degrees(df['HMA'], scaling_factor=slope_scaling)
                 df = indicators.calculate_supertrend(df, period=config.SUPERTREND_PERIOD, multiplier=config.SUPERTREND_MULTIPLIER)
                 
                 # --- History Scanner ---
-                symbol_trades = scan_trades_for_df(df, symbol)
+                symbol_trades = strategy_utils.scan_trades_for_df(df, symbol)
                 all_trades.extend(symbol_trades)
                 
                 # Calculate Accuracy (Win Rate)
@@ -173,10 +85,10 @@ def monitor_market():
                 
                 if trend == 1:
                     status = "BULLISH"
-                    if slope >= config.HMA_SLOPE_THRESHOLD and trend_age <= 1:
+                    if slope >= slope_threshold and trend_age <= 1:
                          signal_text = "ENTRY LONG"
                          signal_color = "green"
-                    elif slope >= config.HMA_SLOPE_THRESHOLD:
+                    elif slope >= slope_threshold:
                          signal_text = "HOLD LONG"
                          signal_color = "green"
                     else:
@@ -184,10 +96,10 @@ def monitor_market():
                          signal_color = "yellow"
                 else:
                     status = "BEARISH"
-                    if slope <= -config.HMA_SLOPE_THRESHOLD and trend_age <= 1:
+                    if slope <= -slope_threshold and trend_age <= 1:
                          signal_text = "ENTRY SHORT"
                          signal_color = "red"
-                    elif slope <= -config.HMA_SLOPE_THRESHOLD:
+                    elif slope <= -slope_threshold:
                          signal_text = "HOLD SHORT"
                          signal_color = "red"
                     else:
@@ -198,6 +110,7 @@ def monitor_market():
                     "price": price,
                     "trend": status,
                     "slope": round(float(slope), 2),
+                    "slope_threshold": slope_threshold,
                     "supertrend": round(float(supertrend_val), 2),
                     "signal": signal_text,
                     "signal_color": signal_color,
@@ -214,12 +127,19 @@ def monitor_market():
         # Sort trades by time (descending)
         all_trades.sort(key=lambda x: x['entry_time'], reverse=True)
         
-        # Convert Timestamps to strings for JSON
+        # Convert Timestamps to strings for JSON (in IST)
+        ist = pytz.timezone('Asia/Kolkata')
         for t in all_trades:
             if isinstance(t['entry_time'], pd.Timestamp):
-                t['entry_time'] = t['entry_time'].strftime("%Y-%m-%d %H:%M")
+                # Assuming original is UTC or naive (Delta API usually returns UTC)
+                if t['entry_time'].tz is None:
+                    t['entry_time'] = t['entry_time'].tz_localize('UTC')
+                t['entry_time'] = t['entry_time'].astimezone(ist).strftime("%Y-%m-%d %H:%M")
+            
             if isinstance(t['exit_time'], pd.Timestamp):
-                t['exit_time'] = t['exit_time'].strftime("%Y-%m-%d %H:%M")
+                if t['exit_time'].tz is None:
+                    t['exit_time'] = t['exit_time'].tz_localize('UTC')
+                t['exit_time'] = t['exit_time'].astimezone(ist).strftime("%Y-%m-%d %H:%M")
 
         if new_data:
             CACHE["signals"] = new_data
