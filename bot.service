@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 # Replace 'username' with your actual GCP username (usually your email prefix)
-# Assuming the code is uploaded to /home/username/robin_bot
-WorkingDirectory=/home/%u/robin_bot
+# Assuming the code is uploaded to /home/username/delta_bot
+WorkingDirectory=/home/%u/delta_bot
 ExecStart=/usr/bin/python3 bot.py
 Restart=always
 RestartSec=10
