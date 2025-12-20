@@ -54,5 +54,5 @@ LOG_LEVEL = "INFO"
 
 # Telegram Notification Configuration
 TELEGRAM_ENABLED = True # Set to True after filling credentials
-TELEGRAM_BOT_TOKEN = "8355697250:AAH4RKxXx_SGr2rwVKxp8Y6L0e3hxXdzhwU"
-TELEGRAM_CHAT_ID = "662682705" # ShivakumarGorasa
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = "" # ShivakumarGorasa
